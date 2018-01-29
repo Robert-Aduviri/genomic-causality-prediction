@@ -3,3 +3,8 @@ Dc
 Di
 Raw
 Tt
+learn_error.tsv
+meta.tsv
+time_left.tsv
+train/
+__pycache__
