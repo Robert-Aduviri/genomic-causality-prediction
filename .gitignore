@@ -7,4 +7,5 @@ learn_error.tsv
 meta.tsv
 time_left.tsv
 train/
+test/
 __pycache__
