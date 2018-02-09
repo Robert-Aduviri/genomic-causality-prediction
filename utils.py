@@ -40,6 +40,9 @@ def load_fold(path, n_fold=0):
     train = to_categorical(train, columns)
     test = to_categorical(test, columns)
 
+    train = train.reset_index(drop=True)
+    test = test.reset_index(drop=True)
+
     return train, test, test_fold
 
 def gmean_score(y, y_pred):
@@ -147,3 +150,50 @@ def evaluate_classifier(path, model, results, desc=''):
 
     results = results.reset_index(drop=True)
     return results
+
+################# DATA PREPROCESSING #####################
+
+def outer_product(df):
+    df_cause = df[[col for col in df.columns if 'cause' in col]]
+    df_effect = df[[col for col in df.columns if 'effect' in col]]
+    df_columns = [f'outer-c{i+1:02}-e{j+1:02}' for i in range(df_cause.shape[1]) \
+                                           for j in range(df_effect.shape[1])]
+    df_data = np.array([np.outer(cause, effect) for cause, effect in \
+                            zip(df_cause.values, df_effect.values)])
+    df_data = np.reshape(df_data, (-1, df_cause.shape[1] * df_effect.shape[1]))
+    df_data = pd.DataFrame(df_data, columns=df_columns)
+    df = df[[col for col in df.columns \
+                if 'cause' not in col and 'effect' not in col]]
+    return pd.concat((df, df_data), 1)   
+    
+def group_wise_data(df):
+    y = df['Target'].values
+    y = np.reshape(y, (-1, 6))
+    X = df[[col for col in df.columns if 'outer' in col]].values
+    X = np.reshape(X, (-1, 6, X.shape[1]))
+    return X, y   
+
+def get_random_batch(X, y, sampler):
+    '''
+    Input / Output shapes
+    X: (#elements, #treatments, #variables)
+    y: (#elements, #treatments)
+    '''
+    X_reshaped = np.reshape(X, (-1, np.prod(X.shape[1:])))
+    y_reshaped = np.array([np.prod(v) for v in y]) 
+    X_resampled, y_resampled = sampler.fit_sample(X_reshaped, y_reshaped)
+    X_resampled = np.reshape(X_resampled, (-1, X.shape[1], X.shape[2]))
+    y_resampled = np.array([[v] * X.shape[1] for v in y_resampled])
+    return X_resampled, y_resampled    
+
+# TODO: use sklearn train_test_split
+def train_val_split(X, y, val_size):
+    '''
+    Input / Output shapes
+    X: (#elements, #treatments, #variables)
+    y: (#elements, #treatments)
+    '''
+    merged = np.concatenate((X, y.reshape(-1, X.shape[1], 1)), 2)
+    np.random.shuffle(merged)
+    X, y = merged[:,:,:-1], merged[:,:,-1].reshape(-1, X.shape[1])
+    return X[:-val_size], X[-val_size:], y[:-val_size], y[-val_size:]
