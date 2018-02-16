@@ -10,3 +10,4 @@ time_left.tsv
 train/
 test/
 __pycache__
+_data

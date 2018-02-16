@@ -11,6 +11,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 from imblearn.under_sampling import RandomUnderSampler
+from sklearn.model_selection import train_test_split
 
 def filter_pvalue(df, pvalue_range):
     df = df[df['Pvalue'].apply(lambda x: x <= pvalue_range[0] or x >= pvalue_range[1])].copy()
@@ -154,6 +155,10 @@ def evaluate_classifier(path, model, results, desc=''):
 ################# DATA PREPROCESSING #####################
 
 def outer_product(df):
+    '''
+    Creates new df_cause * df_effect columns
+    Return dataframe
+    '''
     df_cause = df[[col for col in df.columns if 'cause' in col]]
     df_effect = df[[col for col in df.columns if 'effect' in col]]
     df_columns = [f'outer-c{i+1:02}-e{j+1:02}' for i in range(df_cause.shape[1]) \
@@ -166,7 +171,11 @@ def outer_product(df):
                 if 'cause' not in col and 'effect' not in col]]
     return pd.concat((df, df_data), 1)   
     
-def group_wise_data(df):
+def group_data(df):
+    '''
+    Converts data format from (samples, attributes) 
+    to (groups, samples_per_group, attributes)
+    '''
     y = df['Target'].values
     y = np.reshape(y, (-1, 6))
     X = df[[col for col in df.columns if 'outer' in col]].values
@@ -197,3 +206,80 @@ def train_val_split(X, y, val_size):
     np.random.shuffle(merged)
     X, y = merged[:,:,:-1], merged[:,:,-1].reshape(-1, X.shape[1])
     return X[:-val_size], X[-val_size:], y[:-val_size], y[-val_size:]
+
+def sklearn_train_test_split(X, y, test_size, random_state=None, shuffle=None, stratify=None):
+    X_reshaped = np.reshape(X, (-1, np.prod(X.shape[1:])))
+    y_reshaped = np.array([np.prod(v) for v in y]) 
+    X_train, X_test, y_train, y_test = train_test_split(X_reshaped, y_reshaped, 
+            test_size=test_size, random_state=random_state, shuffle=shuffle, stratify=stratify)
+    X_train = np.reshape(X_train, (-1, X.shape[1], X.shape[2]))
+    X_test = np.reshape(X_test, (-1, X.shape[1], X.shape[2]))
+    y_train = np.array([[v] * X.shape[1] for v in y_train])
+    y_test = np.array([[v] * X.shape[1] for v in y_test])
+    return X_train, X_test, y_train, y_test
+
+
+##### CNN utils
+
+from keras.wrappers.scikit_learn import KerasClassifier
+from keras.optimizers import Adam
+from keras.models import Sequential
+from keras.layers import Conv2D
+from keras.layers import GlobalAveragePooling2D
+from keras.layers import MaxPooling2D
+from keras.layers import Dropout
+from keras.layers import Dense
+from keras.layers import Flatten
+from keras.layers import BatchNormalization
+from keras.layers import Activation
+
+def create_model():
+    model = Sequential()
+
+    model.add(Conv2D(16, (3, 3), padding='same', input_shape=(9, 9, 1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.5))
+    
+    model.add(Conv2D(32, (3, 3), strides=2))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.5))
+    
+    model.add(Conv2D(32, (1, 1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.5))
+    
+    model.add(Conv2D(64, (3, 3)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.5))
+    
+    model.add(Flatten())
+    
+    model.add(Dense(32))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.5))
+       
+#     model.add(GlobalAveragePooling2D())
+
+    model.add(Dense(1, activation='sigmoid'))
+    
+    adam = Adam()
+    model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
+    return model
+
+##### Visualization ######
+
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import seaborn as sns
+sns.set()
+
+def plot_losses(train_loss, val_loss, scale):
+    plt.figure(figsize=(10,5))
+    plt.plot(train_loss)
+    plt.plot([(x + 1) * scale - 1 for x in range(len(val_loss))], val_loss)
+    plt.legend(['train loss', 'validation loss'])
