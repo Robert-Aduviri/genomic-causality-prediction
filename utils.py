@@ -278,8 +278,54 @@ import matplotlib.ticker as ticker
 import seaborn as sns
 sns.set()
 
-def plot_losses(train_loss, val_loss, scale):
-    plt.figure(figsize=(10,5))
-    plt.plot(train_loss)
-    plt.plot([(x + 1) * scale - 1 for x in range(len(val_loss))], val_loss)
-    plt.legend(['train loss', 'validation loss'])
+def plot_losses(train_loss, val_loss, train_acc, val_acc, scale):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,5))
+    ax1.plot(train_loss)
+    ax1.plot([(x + 1) * scale - 1 for x in range(len(val_loss))], val_loss)
+    ax1.legend(['train loss', 'validation loss'])
+    ax2.plot(train_acc)
+    ax2.plot([(x + 1) * scale - 1 for x in range(len(val_acc))], val_acc)
+    ax2.legend(['train acc', 'validation acc'])
+
+### Training utils
+
+from keras.callbacks import ModelCheckpoint
+
+def fit_base_learner(X_tra, y_tra, X_val, y_val, test_fold, X_test, y_test,
+            keras_model, random_state=None, description=''):
+    rus = RandomUnderSampler(random_state=random_state)
+    X_train_batch, y_train_batch = get_random_batch(X_tra, y_tra, rus)
+    X_val_batch, y_val_batch = get_random_batch(X_val, y_val, rus)  
+    model = KerasClassifier(keras_model)
+    
+    checkpointer = ModelCheckpoint(filepath='_data/model.best.hdf5',
+                               verbose=0, save_best_only=True)
+    history = model.fit(X_train_batch.reshape(-1, 9, 9, 1), 
+                        y_train_batch.reshape(-1), 
+                         validation_data=(X_val_batch.reshape(-1, 9, 9, 1),
+                                          y_val_batch.reshape(-1)),
+                         batch_size=1024, epochs=100, verbose=0, 
+                         callbacks=[checkpointer], shuffle=True)
+    
+    y_pred = model.predict(X_train_batch.reshape(-1, 9, 9, 1), batch_size=1024)
+    y_pred_proba = model.predict_proba(X_train_batch.reshape(-1, 9, 9, 1), batch_size=1024)
+    df_train = evaluate_metrics(y_train_batch.reshape(-1), y_pred, y_pred_proba[:,1],
+                              'CNN', test_fold, description)
+    
+    y_pred = model.predict(X_val_batch.reshape(-1, 9, 9, 1), batch_size=1024)
+    y_pred_proba = model.predict_proba(X_val_batch.reshape(-1, 9, 9, 1), batch_size=1024)
+    df_val = evaluate_metrics(y_val_batch.reshape(-1), y_pred, y_pred_proba[:,1],
+                              'CNN', test_fold, description)
+    
+    y_pred = model.predict(X_test.reshape(-1, 9, 9, 1), batch_size=1024)
+    y_pred_proba = model.predict_proba(X_test.reshape(-1, 9, 9, 1), batch_size=1024)
+    df_test = evaluate_metrics(y_test.reshape(-1), y_pred, y_pred_proba[:,1],
+                              'CNN', test_fold, description)
+    return df_train, df_val, df_test, history, model
+
+def append_results(results, df_train, df_val, df_test):
+    col_order = ['Results'] + [col for col in df_train.columns if col != 'Results']
+    df_train['Results'] = 'train'
+    df_val['Results'] = 'valid'
+    df_test['Results'] = 'test'
+    return pd.concat((results, df_train, df_val, df_test))[col_order]
