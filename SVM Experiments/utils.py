@@ -1,6 +1,7 @@
 import re
 import numpy as np
 import pandas as pd
+from scipy.io import loadmat
 
 def mat_to_dataframe(mat_object):
     key = [key for key in mat_object if 'Dataset' in key][0]
@@ -21,3 +22,6 @@ def mat_to_dataframe(mat_object):
     df['Target'] = [0]*len(mat_object[key][0,0][0]) + \
                    [1]*len(mat_object[key][0,0][1])
     return df
+
+def load_mat(mat_file):
+    return mat_to_dataframe(loadmat(mat_file))
