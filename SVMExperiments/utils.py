@@ -21,7 +21,7 @@ def mat_to_dataframe(mat_object):
                         mat_object[key][0,0][3][0][i].reshape(-1)
         ])
     # Get expression data
-    for i in range(18):
+    for i in range(mat_object[key][0,0][0].shape[1]):
         df[columns[i+5]] = np.concatenate([
                         mat_object[key][0,0][0][:,i],
                         mat_object[key][0,0][1][:,i]
