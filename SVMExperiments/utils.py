@@ -61,10 +61,8 @@ def get_bag_data(data, bags, n_samples, bag_id, features):
     bag_id: int
     features: list of ints
     '''
-    bag = data.loc[[x for i in bags[:, bag_id] \
-                    for x in bag_idx(n_samples, i)]]
-    
-    return bag.iloc[:, features]
+    return data[[x for i in bags[:, bag_id] \
+                    for x in bag_idx(n_samples, i)]][:, features]
 
 def predict_bag(bag_id, trn_neg, trn_pos, test_data, test_labels,
                  run, classifier, classifier_name, params, 
@@ -94,29 +92,30 @@ def evaluate_bags(trn_neg, trn_pos, test_data, test_labels,
                   run, classifier, classifier_name, params, 
                   feature_ranker, features, bags, n_samples, num_bags):
     # all columns except metadata (5:) and target (:-1)    
-    trn_neg = trn_neg.iloc[:, 5:-1]
-    trn_pos = trn_pos.iloc[:, 5:-1]
+    trn_neg = trn_neg.iloc[:, 5:-1].values
+    trn_pos = trn_pos.iloc[:, 5:-1].values
+    test_data = test_data.values
+    test_labels = test_labels.values
 
-    trn_neg_shape = trn_neg.shape
-    trn_neg = mp.Array('d', trn_neg.values.reshape(-1))
-    trn_neg = np.ctypeslib.as_array(trn_neg.get_obj())
-    trn_neg = trn_neg.reshape(trn_neg_shape)
+    # trn_neg_shape = trn_neg.shape
+    # trn_neg = mp.Array('d', trn_neg.values.reshape(-1))
+    # trn_neg = np.ctypeslib.as_array(trn_neg.get_obj())
+    # trn_neg = trn_neg.reshape(trn_neg_shape)
     
-    trn_pos_shape = trn_pos.shape
-    trn_pos = mp.Array('d', trn_pos.values.reshape(-1))
-    trn_pos = np.ctypeslib.as_array(trn_pos.get_obj())
-    trn_pos = trn_pos.reshape(trn_pos_shape)
+    # trn_pos_shape = trn_pos.shape
+    # trn_pos = mp.Array('d', trn_pos.values.reshape(-1))
+    # trn_pos = np.ctypeslib.as_array(trn_pos.get_obj())
+    # trn_pos = trn_pos.reshape(trn_pos_shape)
     
-    test_data_shape = test_data.shape
-    test_data = mp.Array('d', test_data.values.reshape(-1))
-    test_data = np.ctypeslib.as_array(test_data.get_obj())
-    test_data = test_data.reshape(test_data_shape)
+    # test_data_shape = test_data.shape
+    # test_data = mp.Array('d', test_data.values.reshape(-1))
+    # test_data = np.ctypeslib.as_array(test_data.get_obj())
+    # test_data = test_data.reshape(test_data_shape)
     
-    test_labels_shape = test_labels.shape
-    test_labels = mp.Array('d', test_labels.values.reshape(-1))
-    test_labels = np.ctypeslib.as_array(test_labels.get_obj())
-    test_labels = test_labels.reshape(test_labels_shape)
-    
+    # test_labels_shape = test_labels.shape
+    # test_labels = mp.Array('d', test_labels.values.reshape(-1))
+    # test_labels = np.ctypeslib.as_array(test_labels.get_obj())
+    # test_labels = test_labels.reshape(test_labels_shape)
 
     partial_predict = partial(predict_bag, trn_neg=trn_neg, trn_pos=trn_pos, 
                             test_data=test_data, test_labels=test_labels, run=run,
@@ -124,18 +123,19 @@ def evaluate_bags(trn_neg, trn_pos, test_data, test_labels,
                             params=params, feature_ranker=feature_ranker, features=features,
                             bags=bags, n_samples=n_samples)
 
-    pool = mp.Pool()
-    results = pool.map(partial_predict, range(max(num_bags)))
-    pool.close()
-    pool.join()
+    # pool = mp.Pool()
+    # results = pool.map(partial_predict, range(max(num_bags)))
+    # pool.close()
+    # pool.join()
 
-    # results = []
-    # for bag_id in range(max(num_bags)):
-    #     results.append(partial_predict(bag_id))
+    results = []
+    for bag_id in range(max(num_bags)):
+        results.append(partial_predict(bag_id))
+        print(results[-1][1])
     
     metrics, logs, preds = zip(*results)
-    for log in logs:
-        print(log)
+    # for log in logs:
+    #     print(log)
 
     preds = np.array(preds)
     metrics = np.array(metrics)
@@ -158,6 +158,10 @@ def classify_feature_rank(DataCV_dir, Bags_dir, FeatRanking_dir, classifiers, pa
                           dataset, feature_set, treatment, 
                           pval_pos_threshold, num_bags, num_runs,
                           num_top_features, test_all_features=False):
+    
+    print(f'Feature set: {feature_set} | Dataset: {dataset} | Treatment: {treatment} | '
+          f'Pval: {pval_pos_threshold}')
+    print(f'Num bags: {num_bags} | Num runs: {num_runs} | Num features: {num_top_features} | All features: {test_all_features}')
     
     train = load_mat(DataCV_dir/f'{feature_set}/{dataset}_{treatment}'
                                 f'({pval_pos_threshold}).trn.mat')
