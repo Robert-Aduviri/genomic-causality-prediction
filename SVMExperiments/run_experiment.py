@@ -159,7 +159,7 @@ def classify_feature_rank(DataCV_dir, Bags_dir, FeatRanking_dir, classifiers, pa
                           pval_pos_threshold, num_bags, num_runs,
                           num_top_features, test_all_features=False):
     
-    file_name = f'{feature_set} - {dataset} - {treatment}.txt'
+    file_name = f'{dataset}-{feature_set}-{treatment}.txt'
     
     with open(file_name, 'w') as f:
     
@@ -219,7 +219,47 @@ def classify_feature_rank(DataCV_dir, Bags_dir, FeatRanking_dir, classifiers, pa
                     test_labels = test.Target
                     evaluate_bags(trn_neg, trn_pos, test_data, test_labels, 
                                   run, classifier, classifier_name, param, 
-                                  feat_rank_row.Method, features, bags, n_samples, num_bags)
-                    
-                    
+                                  feat_rank_row.Method, features, bags, n_samples, num_bags, f)
+   
+
+import argparse
+from pathlib import Path
+from lightgbm import LGBMClassifier
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import LogisticRegression
+                 
+if __name__== "__main__":
+	parser = argparse.ArgumentParser()
+	parser.add_argument('dataset', type=str)
+	parser.add_argument('featureset', type=str)
+	parser.add_argument('treatment', type=str)
+	args = parser.parse_args()
+
+	DATA = Path('.')
+	DataCV_dir      = DATA/'DataCV'
+	Bags_dir        = DATA/'Bags'
+	FeatRanking_dir = DATA/'FeatRanking'
+		
+	classifiers = [RandomForestClassifier, LGBMClassifier, SVC, 
+						LogisticRegression, KNeighborsClassifier]
+
+	parameters = [{'n_estimators': 200, 'n_jobs': -1, 'random_state': 42},
+ 					  {'n_estimators': 100, 'n_jobs': -1, 'random_state': 42},
+					  {},
+					  {'random_state': 42},
+					  {'n_neighbors': 5, 'n_jobs': -1}]
+
+	classify_feature_rank(DataCV_dir, Bags_dir, FeatRanking_dir,
+                      classifiers, parameters,
+                      args.dataset, args.featureset, args.treatment, 0.01, num_bags=[100,200,300],
+                      num_runs=[1,2,3,4,5], num_top_features=[2,4,6,8,10,12],
+							 test_all_features=True)
+	
+
+	
+
+
+
                           
