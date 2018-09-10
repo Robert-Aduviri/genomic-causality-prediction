@@ -1,0 +1,12 @@
+name: iapucp
+channels:
+- defaults
+dependencies:
+- numpy=1.12.1=py36he24570b_1
+- pandas=0.21.1=py36h20b78c2_0
+- python=3.6.3=h6c0c0dc_5
+- scikit-learn=0.19.1=py36hedc7406_0
+- scipy=1.0.0=py36hbf646e7_0
+- pip:
+  - lightgbm==2.1.2
+ 
