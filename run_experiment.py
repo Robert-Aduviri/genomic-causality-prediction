@@ -168,13 +168,12 @@ def evaluate_bags(trn_neg, trn_pos, test_data, test_labels,
 
     # print()       
     
-    
 def classify_feature_rank(DataCV_dir, Bags_dir, FeatRanking_dir, classifiers, params, 
                           dataset, feature_set, treatment, 
                           pval_pos_threshold, num_bags, num_runs,
                           num_top_features, test_all_features=False):
     
-    file_name = f'{dataset}-{feature_set}-{treatment}.txt'
+    file_name = f'Results/{dataset}-{feature_set}-{treatment}.txt'
     
     with open(file_name, 'w') as f:
     
