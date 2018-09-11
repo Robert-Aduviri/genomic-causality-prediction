@@ -90,7 +90,9 @@ import ctypes
 
 def evaluate_bags(trn_neg, trn_pos, test_data, test_labels, 
                   run, classifier, classifier_name, params, 
-                  feature_ranker, features, bags, n_samples, num_bags, f):
+                  feature_ranker, features, bags, n_samples, num_bags, f,
+                  idx_classifier=None, n_classifiers=None, idx_featrank=None, n_featrank=None,
+                  idx_topfeat=None, n_topfeats=None):
     # all columns except metadata (5:) and target (:-1)    
     trn_neg = trn_neg.iloc[:, 5:-1].values
     trn_pos = trn_pos.iloc[:, 5:-1].values
@@ -128,10 +130,23 @@ def evaluate_bags(trn_neg, trn_pos, test_data, test_labels,
     # pool.close()
     # pool.join()
 
+    if n_classifiers is not None:
+        n_bags = max(num_bags)
+        total = n_bags * n_topfeats * n_featrank * n_classifiers
+    
     results = []
     for bag_id in range(max(num_bags)):
         results.append(partial_predict(bag_id))
-        print(results[-1][1], file=f, flush=True)
+        progress_str = ''
+        if n_classifiers is not None:
+            # print(f'bag_id: {bag_id} | n_bags: {n_bags} | idx_featrank: {idx_featrank} | '
+            #       f'n_featrank: {n_featrank} | idx_classifier: {idx_classifier} | n_classifiers: {n_classifiers}')
+            progress = bag_id + idx_topfeat * n_bags + \
+                       idx_featrank * n_topfeats * n_bags + \
+                       idx_classifier * n_featrank * n_topfeats * n_bags
+            progress_str = f'{progress/total*100:.2f}% | '
+        
+        print(progress_str + results[-1][1], file=f, flush=True)
     
     metrics, logs, preds = zip(*results)
     # for log in logs:
@@ -188,16 +203,19 @@ def classify_feature_rank(DataCV_dir, Bags_dir, FeatRanking_dir, classifiers, pa
 
             feat_rank_rows = feat_rank[feat_rank.Run == run]
 
-            for classifier, param in zip(classifiers, params):
+            n_classifiers = len(classifiers)
+            for idx_classifier, (classifier, param) in enumerate(zip(classifiers, params)):
                 # [LGBMClassifier, LinearSVC, RandomForestClassifier]
                 classifier_name = str(classifier).strip("<>'").split('.')[-1]
                 # print(' '*3, f'Classifier: {classifier_name}')
 
-                for idx, feat_rank_row in feat_rank_rows.iterrows():
+                n_featranks = len(feat_rank_rows)
+                for idx_featrank, (_, feat_rank_row) in enumerate(feat_rank_rows.iterrows()):
                     # [Entropy, Ttest, Brattacharyya, Wilcoxon]
                     # print(' '*6, f'Feature ranking method: {feat_rank_row.Method}')             
 
-                    for num_top_feats in num_top_features:
+                    n_topfeats = len(num_top_features)
+                    for idx_topfeat, num_top_feats in enumerate(num_top_features):
                         # [2, 4, 6, 7, 10, 12] matlab index starts at 1
                         features = [col - 1 for col in feat_rank_row[2:2+num_top_feats]]
                         # print(' '*9, f'Features: {features}')
@@ -206,7 +224,9 @@ def classify_feature_rank(DataCV_dir, Bags_dir, FeatRanking_dir, classifiers, pa
                         test_labels = test.Target
                         evaluate_bags(trn_neg, trn_pos, test_data, test_labels, 
                                       run, classifier, classifier_name, param, 
-                                      feat_rank_row.Method, features, bags, n_samples, num_bags, f)    
+                                      feat_rank_row.Method, features, bags, n_samples, num_bags, f,
+                                      idx_classifier, n_classifiers, idx_featrank, n_featranks,
+                                      idx_topfeat, n_topfeats)    
                 if test_all_features:
                     # print(' '*6, f'All features')
                     # use all features (6 metadata columns)
