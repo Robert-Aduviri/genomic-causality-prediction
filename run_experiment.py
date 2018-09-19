@@ -197,8 +197,9 @@ def classify_feature_rank(DataCV_dir, Bags_dir, FeatRanking_dir, classifiers, pa
             bags = loadmat(Bags_dir/f'{dataset}({pval_pos_threshold})_Bags{run}.mat')
             # Sanity check
             n_samples = 6 if treatment == 'All' else 3
-            assert bags['NegGenePairsBag'].max() == len(train[train.Target==0]) // n_samples
-            assert bags['PosGenePairsBag'].max() == len(train[train.Target==1]) // n_samples
+            # TODO: evaluate checks (low probabilty of false negatives)
+            # assert bags['NegGenePairsBag'].max() == len(train[train.Target==0]) // n_samples
+            # assert bags['PosGenePairsBag'].max() == len(train[train.Target==1]) // n_samples
 
             feat_rank_rows = feat_rank[feat_rank.Run == run]
 
