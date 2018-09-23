@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy.io import loadmat
 from sklearn.metrics import confusion_matrix
+from pathlib import Path
 
 # 0: Positive class data (16662, 18)
 # 1: Negative class data (673200, 18)
@@ -244,5 +245,64 @@ def classify_feature_rank(DataCV_dir, Bags_dir, FeatRanking_dir, classifiers, pa
                                   run, classifier, classifier_name, param, 
                                   feat_rank_row.Method, features, bags, n_samples, num_bags, f)
                     
-                    
+
+def load_result(dataset, featureset, treatment):
+    file = f'{dataset}-{featureset}-{treatment}.txt'
+    folder = 'Results/Previous' if Path(f'Results/Previous/{file}').exists() \
+             else 'Results/Results'
+    with open(f'{folder}/{file}', 'r') as f:
+        lines = f.readlines()
+    run, feature_ranker, classifier, num_features, bag = None, None, None, None, None 
+    means, ensembles, results = [], [], []
+    for line in lines[2:]:
+        tokens = [t.strip() for t in line.split('|')]
+        if len(tokens) == 3:
+            tpr, tnr, gmean = [float(t.split(':')[-1]) for t in tokens]
+            means += [{
+                'Run': run, 'FeatureRanker': feature_ranker, 'Classifier': classifier,
+                'NumFeatures': num_features, 'Num Bags': np.nan, 'Mean TPR': tpr,
+                'Mean TNR': tnr, 'Mean GMean': gmean
+            }]
+        elif len(tokens) >= 12:
+            if len(tokens) == 13:
+                tokens = tokens[1:]
+            run, feature_ranker, classifier = int(tokens[0].split(':')[-1]), tokens[1], tokens[2]
+            num_features, bag = int(tokens[3].split(':')[-1]), tokens[4]
+            tpr, tnr, gmean = [float(t.split(':')[-1]) for t in tokens[5:8]]
+            tp, tn, fp, fn = [int(t.split(':')[-1]) for t in tokens[8:]]
+            payload = {
+                'Run': run, 'FeatureRanker': feature_ranker, 'Classifier': classifier,
+                'NumFeatures': num_features, 'TPR': tpr,
+                'TNR': tnr, 'GMean': gmean, 'TP': tp, 'TN': tn, 'FP': fp, 'FN': fn
+            }
+            if 'Ensemble' in bag:
+                ensembles += [{**payload, 'Num Bags': int(bag.split()[2])}]
+            else:
+                results += [{**payload, 'Bag': int(bag.split(':')[-1])}]
+    results = pd.DataFrame(results, columns=['Run', 'FeatureRanker', 'Classifier', 
+                                    'NumFeatures', 'Bag', 'TPR', 'TNR',
+                                    'GMean', 'TP', 'TN', 'FP', 'FN'])
+    ensembles = pd.DataFrame(ensembles, columns=['Run', 'FeatureRanker', 'Classifier', 
+                                      'NumFeatures', 'Num Bags', 'TPR', 'TNR',
+                                      'GMean', 'TP', 'TN', 'FP', 'FN'])
+    means = pd.DataFrame(means, columns=['Run', 'FeatureRanker', 'Classifier',
+                                  'NumFeatures', 'Num Bags', 'Mean TPR', 
+                                  'Mean TNR', 'Mean GMean'])
+    means['Num Bags'] = ensembles['Num Bags']
+    return results, ensembles, means
                           
+    
+def list_files(datasets, featuresets, treatments):
+    for dataset in datasets:
+        for featureset in featuresets:
+            for treatment in treatments:
+                file = f'{dataset}-{featureset}-{treatment}'
+                if Path(f'Results/Previous/{file}.txt').exists() and \
+                   Path(f'Results/Results/{file}.txt').exists():
+                    print(f'{file} found in Both')
+                elif Path(f'Results/Previous/{file}.txt').exists():
+                    print(f'{file} found in Previous')
+                elif Path(f'Results/Results/{file}.txt').exists():
+                    print(f'{file} found in Results')
+                else:
+                    print(f'{file} not found')
