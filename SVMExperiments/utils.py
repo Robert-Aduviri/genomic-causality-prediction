@@ -248,8 +248,8 @@ def classify_feature_rank(DataCV_dir, Bags_dir, FeatRanking_dir, classifiers, pa
 
 def load_result(dataset, featureset, treatment):
     file = f'{dataset}-{featureset}-{treatment}.txt'
-    folder = 'Results/Previous' if Path(f'Results/Previous/{file}').exists() \
-             else 'Results/Results'
+    folder = 'Results/Results' if Path(f'Results/Results/{file}').exists() \
+             else 'Results/Previous'
     with open(f'{folder}/{file}', 'r') as f:
         lines = f.readlines()
     run, feature_ranker, classifier, num_features, bag = None, None, None, None, None 
@@ -306,3 +306,20 @@ def list_files(datasets, featuresets, treatments):
                     print(f'{file} found in Results')
                 else:
                     print(f'{file} not found')
+                    
+def get_dataframe(dataset, featuresets, treatments):
+    results = pd.DataFrame()
+    ensembles = pd.DataFrame()
+    for featureset in featuresets:
+        for treatment in treatments:
+            res, ens, mea = load_result(dataset, featureset, treatment)
+            res['dataset'] = dataset
+            res['featureset'] = featureset
+            res['treatment'] = treatment
+            ens['dataset'] = dataset
+            ens['featureset'] = featureset
+            ens['treatment'] = treatment
+
+            results = pd.concat([results, res])
+            ensembles = pd.concat([ensembles, ens])
+    return results, ensembles
