@@ -4,6 +4,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 from scipy.io import loadmat
+from h5py import File
 from sklearn.metrics import confusion_matrix
 
 # 0: Positive class data (16662, 18)
@@ -37,8 +38,25 @@ def mat_to_dataframe(mat_object):
                    [0]*len(mat_object[key][0,0][1])
     return df
 
-def load_mat(mat_file):
-    return mat_to_dataframe(loadmat(str(mat_file)))
+def h5py_to_dataframe(h5py_object):
+    key = [key for key in h5py_object if 'Dataset' in key][0]
+    pos = pd.DataFrame(np.array(h5py_object[key]['Dpos']).T)
+    neg = pd.DataFrame(np.array(h5py_object[key]['Dneg']).T)
+    feat_cols = [f'Feat_{i+1:03}' for i in range(pos.shape[1])]
+    pos.columns = feat_cols
+    neg.columns = feat_cols
+    pos['Target'] = 1
+    neg['Target'] = 0
+    data = pd.concat([pos, neg])
+    metadata_cols = ['CauseGene', 'EffectGene', 'Replicate', 'Treatment', 'Pvalue']
+    for c in metadata_cols:
+        data[c] = np.nan
+    cols = metadata_cols + feat_cols + ['Target']
+    return data[cols]
+
+def load_mat(mat_file, h5py=False):
+    return h5py_to_dataframe(File(str(mat_file), 'r')) if h5py else \
+           mat_to_dataframe(loadmat(str(mat_file)))
 
 def log_metrics(targets, preds, run, feat_ranking, classifier, n_features, description):
     (tn, fp), (fn, tp) = confusion_matrix(targets, preds)
@@ -171,7 +189,7 @@ def evaluate_bags(trn_neg, trn_pos, test_data, test_labels,
 def classify_feature_rank(DataCV_dir, Bags_dir, FeatRanking_dir, classifiers, params, 
                           dataset, feature_set, treatment, 
                           pval_pos_threshold, num_bags, num_runs,
-                          num_top_features, test_all_features=False):
+                          num_top_features, test_all_features=False, h5py=False):
     
     file_name = f'Results/{dataset}-{feature_set}-{treatment}.txt'
     
@@ -183,9 +201,9 @@ def classify_feature_rank(DataCV_dir, Bags_dir, FeatRanking_dir, classifiers, pa
               file=f, flush=True)
 
         train = load_mat(DataCV_dir/f'{feature_set}/{dataset}_{treatment}'
-                                    f'({pval_pos_threshold}).trn.mat')
+                                    f'({pval_pos_threshold}).trn.mat', h5py)
         test = load_mat(DataCV_dir/f'{feature_set}/{dataset}_{treatment}'
-                                   f'({pval_pos_threshold}).tst.mat')
+                                   f'({pval_pos_threshold}).tst.mat', h5py)
         feat_rank = pd.read_csv(FeatRanking_dir/f'{feature_set}/{dataset}_{treatment}'
                                                 f'({pval_pos_threshold}).csv', sep=';')
         trn_neg = train[train.Target == 0].reset_index(drop=True)
@@ -239,7 +257,7 @@ def classify_feature_rank(DataCV_dir, Bags_dir, FeatRanking_dir, classifiers, pa
                     test_labels = test.Target
                     evaluate_bags(trn_neg, trn_pos, test_data, test_labels, 
                                   run, classifier, classifier_name, param, 
-                                  feat_rank_row.Method, features, bags, n_samples, num_bags, f)
+                                  'AllFeatures', features, bags, n_samples, num_bags, f)
    
 
 import argparse
@@ -270,12 +288,14 @@ if __name__== "__main__":
 					  {},
 					  {'random_state': 42},
 					  {'n_neighbors': 5, 'n_jobs': -1}]
+    
+    h5py = featureset == 'Tt'
 
 	classify_feature_rank(DataCV_dir, Bags_dir, FeatRanking_dir,
                       classifiers, parameters,
                       args.dataset, args.featureset, args.treatment, 0.01, num_bags=[25, 50, 75, 100],
                       num_runs=[1], num_top_features=[2,4,6,8,10,12],
-							 test_all_features=True)
+							 test_all_features=True, h5py=h5py)
 	
 
 	
