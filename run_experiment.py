@@ -289,8 +289,8 @@ if __name__== "__main__":
 					  {'random_state': 42},
 					  {'n_neighbors': 5, 'n_jobs': -1}]
     
-    h5py = featureset == 'Tt'
-
+	h5py = (args.featureset == 'Tt')
+    
 	classify_feature_rank(DataCV_dir, Bags_dir, FeatRanking_dir,
                       classifiers, parameters,
                       args.dataset, args.featureset, args.treatment, 0.01, num_bags=[25, 50, 75, 100],

@@ -9,4 +9,5 @@ dependencies:
 - scipy=1.0.0=py36hbf646e7_0
 - pip:
   - lightgbm==2.1.2
+  - h5py==2.7.1
  
