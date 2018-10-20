@@ -276,6 +276,7 @@ if __name__== "__main__":
 	args = parser.parse_args()
 
 	DATA = Path('.')
+	DATA = Path('./_data/genomics-data')
 	DataCV_dir      = DATA/'DataCV'
 	Bags_dir        = DATA/'Bags'
 	FeatRanking_dir = DATA/'FeatRanking'
@@ -285,9 +286,14 @@ if __name__== "__main__":
 
 	parameters = [{'n_estimators': 200, 'n_jobs': -1, 'random_state': 42},
  					  {'n_estimators': 100, 'n_jobs': -1, 'random_state': 42},
-					  {},
+					  {'random_state': 42},
 					  {'random_state': 42},
 					  {'n_neighbors': 5, 'n_jobs': -1}]
+    
+	classifiers = [SVC, LogisticRegression, KNeighborsClassifier]
+	parameters = [{'random_state': 42},
+				  {'random_state': 42},
+				  {'n_neighbors': 5, 'n_jobs': -1}]
     
 	h5py = (args.featureset == 'Tt')
     
