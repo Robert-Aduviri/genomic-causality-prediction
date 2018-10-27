@@ -284,6 +284,8 @@ if __name__== "__main__":
 	classifiers = [RandomForestClassifier, LGBMClassifier, SVC, 
 						LogisticRegression, KNeighborsClassifier]
 
+    # Specify solver (lbfgs) in LR, gamma (scale) in SVM
+    
 	parameters = [{'n_estimators': 200, 'n_jobs': -1, 'random_state': 42},
  					  {'n_estimators': 100, 'n_jobs': -1, 'random_state': 42},
 					  {'random_state': 42},
@@ -303,9 +305,3 @@ if __name__== "__main__":
                       num_runs=[1], num_top_features=[2,4,6,8,10,12],
 							 test_all_features=True, h5py=h5py)
 	
-
-	
-
-
-
-                          
