@@ -292,10 +292,11 @@ if __name__== "__main__":
 					  {'random_state': 42},
 					  {'n_neighbors': 5, 'n_jobs': -1}]
     
-	classifiers = [SVC, LogisticRegression, KNeighborsClassifier]
-	parameters = [{'random_state': 42},
-				  {'random_state': 42},
-				  {'n_neighbors': 5, 'n_jobs': -1}]
+	classifiers = [LogisticRegression, KNeighborsClassifier]
+
+	parameters = [	  {'random_state': 42},
+					  {'n_neighbors': 5, 'n_jobs': -1}]
+    
     
 	h5py = (args.featureset == 'Tt')
     
