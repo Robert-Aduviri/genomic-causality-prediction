@@ -246,10 +246,11 @@ def classify_feature_rank(DataCV_dir, Bags_dir, FeatRanking_dir, classifiers, pa
                                   feat_rank_row.Method, features, bags, n_samples, num_bags, f)
                     
 
-def load_result(dataset, featureset, treatment):
+def load_result(dataset, featureset, treatment, folder=None):
     file = f'{dataset}-{featureset}-{treatment}.txt'
-    folder = 'Results/Results' if Path(f'Results/Results/{file}').exists() \
-             else 'Results/Previous'
+    if folder is None:
+        folder = 'Results/Results' if Path(f'Results/Results/{file}').exists() \
+                 else 'Results/Previous'
     with open(f'{folder}/{file}', 'r') as f:
         lines = f.readlines()
     run, feature_ranker, classifier, num_features, bag = None, None, None, None, None 
